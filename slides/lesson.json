@@ -1,0 +1,681 @@
+[
+  {
+    "title": "Works on\nour machines.",
+    "layout": "cover",
+    "section": "01 / THE PROBLEM",
+    "subtitle": "An introduction to Docker",
+    "body": "App Factory · University workshop",
+    "image": "assets/classroom.png",
+    "notes": "Ask: who has cloned a project that failed to run? Let two students describe the error. Today we will package a small app and its runtime, then run it with a separate data service. Plan: 90 minutes including discussion and lab. Cover artwork is a generated illustration, not a real class photograph."
+  },
+  {
+    "title": "Same code.\nDifferent environments.",
+    "layout": "contrast",
+    "section": "01 / THE PROBLEM",
+    "left": [
+      "YOUR LAPTOP",
+      "Python is installed.\nRedis is running.\nThe settings are right."
+    ],
+    "right": [
+      "YOUR TEAMMATE’S",
+      "A different Python version.\nNo Redis service.\nA missing environment variable."
+    ],
+    "bottom": "The code travels. Its environment needs to travel too.",
+    "notes": "Use an example: the source is identical, but Redis is missing. Ask what else the app needs besides code. Capture runtime, dependencies, configuration, OS/architecture, and external services. Packaging reduces environment drift; it does not eliminate every difference."
+  },
+  {
+    "title": "A virtual machine\nis a whole computer.",
+    "layout": "feature",
+    "section": "02 / VIRTUAL MACHINES",
+    "big": "VM",
+    "statement": "Virtual hardware.\nA separate guest kernel.",
+    "rows": [
+      [
+        "Resources",
+        "Virtual CPUs, RAM, disks and network interfaces use the physical host."
+      ],
+      [
+        "Hypervisor",
+        "Allocates hardware resources to each guest."
+      ],
+      [
+        "Guest OS",
+        "Boots and runs its own kernel and user-space programs."
+      ]
+    ],
+    "bottom": "HOST = the real machine     /     GUEST = the virtual machine",
+    "notes": "Explain host versus guest. Virtual hardware uses the real machine’s resources through a hypervisor. A guest OS must still be installed, booted, patched, and stored. Source: https://www.redhat.com/en/topics/virtualization/what-is-virtualization"
+  },
+  {
+    "title": "Two kinds of hypervisor",
+    "layout": "contrast",
+    "section": "02 / VIRTUAL MACHINES",
+    "left": [
+      "TYPE 1 / BARE METAL",
+      "Runs at the hardware layer.\n\nExamples: KVM, VMware ESXi."
+    ],
+    "right": [
+      "TYPE 2 / HOSTED",
+      "Runs through a host OS.\n\nExamples: VirtualBox,\nVMware Workstation."
+    ],
+    "bottom": "Both provide virtual hardware. Their placement differs.",
+    "notes": "Examples: KVM is integrated into Linux; VMware ESXi is a familiar bare-metal example. VirtualBox and VMware Workstation are hosted examples. Hardware virtualization support helps guests execute efficiently. Do not imply every instruction is interpreted in software. Source: https://www.redhat.com/en/topics/virtualization/what-is-virtualization"
+  },
+  {
+    "title": "When a VM makes sense",
+    "layout": "rows",
+    "section": "02 / VIRTUAL MACHINES",
+    "rows": [
+      [
+        "A different OS",
+        "Run an Ubuntu lab on a Windows laptop."
+      ],
+      [
+        "A cloud machine",
+        "Provision a server with a separate operating system."
+      ],
+      [
+        "A separate kernel",
+        "Test a kernel or support a legacy environment."
+      ]
+    ],
+    "bottom": "Tradeoff: another OS to store, boot, allocate memory to and patch.",
+    "notes": "Ask why a university might issue one VM per student. Separate guest kernels permit distinct OS environments. VM snapshots and isolated experiments can help teaching and administration. VMs are still software and can have vulnerabilities. Source: https://www.redhat.com/en/topics/virtualization/what-is-virtualization These are tradeoffs, not claims that VMs are bad or always slow. Actual overhead and startup times depend on the workload and platform. VMs can be the right isolation boundary when separate kernels are required. Source: https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-a-container/"
+  },
+  {
+    "title": "A container\nis an isolated process.",
+    "layout": "feature",
+    "section": "03 / CONTAINERS",
+    "big": "PROCESS",
+    "statement": "App + dependencies.\nA shared Linux kernel.",
+    "rows": [
+      [
+        "Namespaces",
+        "Separate views of processes, filesystems and networking."
+      ],
+      [
+        "Control groups",
+        "Account for resources and enforce configured limits."
+      ],
+      [
+        "Image layers",
+        "Supply the application and user-space files."
+      ]
+    ],
+    "bottom": "An Ubuntu image contains Ubuntu user space, not its own booted kernel.",
+    "notes": "Examples: a Python API, Nginx web server, and Redis data service can each run in a container. The container image supplies user-space files, not a separate kernel. On a non-Linux laptop the Linux kernel is supplied by a Linux environment/VM. Source: https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-a-container/ Namespaces isolate views; cgroups handle resource accounting and configured limits. Limits are not a promise that every container has a useful CPU/RAM cap by default. Isolation also depends on capabilities, permissions, and kernel security features. Sources: https://docs.docker.com/engine/security/ ; https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-an-image/"
+  },
+  {
+    "title": "A smaller unit to distribute",
+    "layout": "contrast",
+    "section": "03 / CONTAINERS",
+    "left": [
+      "WHY TEAMS USE THEM",
+      "Package runtime dependencies.\nReuse filesystem layers.\nStart application processes."
+    ],
+    "right": [
+      "WHAT STILL MATTERS",
+      "Kernel and CPU compatibility.\nConfiguration and services.\nPermissions and resource limits."
+    ],
+    "bottom": "Examples: a Python API, an Nginx web server, a Redis data service.",
+    "notes": "Common uses: reproducible development setups, CI test environments, and distributing services. Containers often have lower per-app overhead than full VMs. Avoid universal speed or size numbers. Architecture, kernel compatibility, config and external services still affect behavior. Sources: https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-a-container/ ; https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-an-image/ Security: https://docs.docker.com/engine/security/"
+  },
+  {
+    "title": "The kernel is the key difference",
+    "layout": "art",
+    "section": "04 / VMS + CONTAINERS",
+    "image": "assets/vm-containers.png",
+    "body": "VMs keep guest kernels separate.\nContainers share a kernel.",
+    "notes": "Concept illustration generated for teaching, with labels checked against https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-a-container/ and https://www.redhat.com/en/topics/virtualization/what-is-virtualization. Linux containers are the scope here. Do not infer that containers inherently provide the same boundary as separate VMs."
+  },
+  {
+    "title": "Two useful isolation boundaries",
+    "layout": "table",
+    "section": "04 / VMS + CONTAINERS",
+    "headers": [
+      "",
+      "VIRTUAL MACHINE",
+      "CONTAINER"
+    ],
+    "rows": [
+      [
+        "Unit",
+        "Virtual computer",
+        "Isolated process"
+      ],
+      [
+        "Kernel",
+        "One per guest",
+        "Shared host / VM kernel"
+      ],
+      [
+        "Package",
+        "Guest OS + application",
+        "App + user-space files"
+      ],
+      [
+        "Typical fit",
+        "Distinct OS environments",
+        "Distributing services"
+      ]
+    ],
+    "bottom": "Lower per-app overhead is common with containers; actual results depend on the workload.",
+    "notes": "Read the kernel row first. Typical isolation differs; neither is an unconditional security guarantee. Linux images require a Linux kernel and compatible CPU architecture or emulation. Sources: https://www.redhat.com/en/topics/virtualization/what-is-virtualization ; https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-a-container/ ; https://docs.docker.com/engine/security/"
+  },
+  {
+    "title": "Containers inside VMs",
+    "layout": "feature",
+    "section": "04 / VMS + CONTAINERS",
+    "big": "BOTH",
+    "statement": "The VM hosts the machine.\nContainers package its apps.",
+    "rows": [
+      [
+        "In the cloud",
+        "One VM can run several containerized services."
+      ],
+      [
+        "On a Mac or Windows PC",
+        "Desktop supplies a Linux environment for these Linux containers."
+      ],
+      [
+        "On native Linux",
+        "Docker Engine can use the host’s Linux kernel directly."
+      ]
+    ],
+    "bottom": "Docker Desktop for Linux also uses its own VM and context.",
+    "notes": "The VM provides a machine boundary; containers package applications within it. Docker Desktop for Linux also runs a VM, whereas native Linux Engine can run directly on the host kernel. Sources: https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-a-container/ ; https://docs.docker.com/desktop/setup/install/linux/ ; https://docs.docker.com/desktop/setup/install/windows-install/ ; https://docs.docker.com/desktop/setup/install/mac-install/"
+  },
+  {
+    "title": "Docker is the toolkit",
+    "layout": "rows",
+    "section": "05 / DOCKER",
+    "rows": [
+      [
+        "Build",
+        "Turn a Dockerfile and build context into an image."
+      ],
+      [
+        "Distribute",
+        "Pull and push images through a registry."
+      ],
+      [
+        "Run",
+        "Create and manage containers from images."
+      ]
+    ],
+    "bottom": "Docker makes containers usable across development, testing and deployment.",
+    "notes": "Docker is a platform around containers, not a synonym for all container technology. Explain that the docker command is a client talking to an engine. Compose will describe our two-service application. Source: https://docs.docker.com/get-started/docker-overview/"
+  },
+  {
+    "title": "Five core Docker concepts",
+    "layout": "glossary",
+    "section": "05 / DOCKER",
+    "rows": [
+      [
+        "Client",
+        "The docker CLI sends requests to the engine."
+      ],
+      [
+        "Daemon",
+        "dockerd manages containers, images, networks and volumes."
+      ],
+      [
+        "Image",
+        "Packaged files and startup defaults."
+      ],
+      [
+        "Container",
+        "A runnable instance of an image."
+      ],
+      [
+        "Registry",
+        "Stores images; Docker Hub is one example."
+      ]
+    ],
+    "bottom": "A teaching grouping, not an exhaustive list. Compose connects the services in this lab.",
+    "notes": "This is a teaching grouping of five concepts, not an exhaustive or officially fixed component count. docker is the CLI client; dockerd is the daemon. Docker Hub is one registry. Networks, volumes, Buildx and Compose also matter. Source: https://docs.docker.com/get-started/docker-overview/"
+  },
+  {
+    "title": "A command reaches the engine",
+    "layout": "architecture",
+    "section": "05 / DOCKER",
+    "image": "assets/docker-architecture.webp",
+    "body": "CLIENT → DAEMON → IMAGE / CONTAINER\nPulls and pushes also involve a registry.",
+    "notes": "Trace docker pull from client to daemon to registry, then docker run from a local image to a container. The registry stores images; it does not run the classroom containers. Image source and technical reference: https://docs.docker.com/get-started/docker-overview/ ; https://docs.docker.com/get-started/images/docker-architecture.webp . Docker illustration © Docker Inc., used with attribution for teaching."
+  },
+  {
+    "title": "An image tag is a label",
+    "layout": "tag",
+    "section": "05 / DOCKER",
+    "code": "redis:7.4-alpine",
+    "rows": [
+      [
+        "redis",
+        "Image repository: Docker Hub’s official Redis image."
+      ],
+      [
+        ":",
+        "Separates repository and tag."
+      ],
+      [
+        "7.4-alpine",
+        "One tag: Redis 7.4 on an Alpine Linux base."
+      ]
+    ],
+    "bottom": "python:3.13-slim = Python 3.13 with a smaller Debian user-space base.",
+    "notes": "Image syntax: https://docs.docker.com/reference/cli/docker/image/tag/ ; image variants: https://hub.docker.com/_/python ; https://hub.docker.com/_/redis . Tags may change. Omitting a tag defaults to latest, which is not a promise of newest. Digests pin content. redis:6379 is a host:port address, not an image tag."
+  },
+  {
+    "title": "Our Dockerfile, decoded",
+    "layout": "code-pairs",
+    "section": "05 / DOCKER",
+    "rows": [
+      [
+        "FROM python:3.13-slim",
+        "Base image: repository + version/variant tag."
+      ],
+      [
+        "WORKDIR /app",
+        "Working directory inside the image."
+      ],
+      [
+        "COPY requirements.txt .",
+        "Source file → current working directory."
+      ],
+      [
+        "RUN pip install --no-cache-dir \\\n    -r requirements.txt",
+        "Install at build time; skip pip’s cache.\n-r reads requirements.txt."
+      ],
+      [
+        "COPY app/ .",
+        "Copy app source into that working directory."
+      ]
+    ],
+    "bottom": "Requirements come first so source-only edits can reuse the dependency-install layer.",
+    "notes": "Explain FROM, WORKDIR, COPY and RUN. Dot is the destination. --no-cache-dir affects pip, not Docker’s build cache. The backslash continues the Dockerfile instruction onto the next line; the repository uses one line for that RUN instruction. Source: repository Dockerfile; https://docs.docker.com/reference/dockerfile/ . Full breakdown: docs/commands.md."
+  },
+  {
+    "title": "Starting the web process",
+    "layout": "code-pairs",
+    "section": "05 / DOCKER",
+    "rows": [
+      [
+        "USER 10001:10001",
+        "Numeric user ID : group ID. Avoid a root web process."
+      ],
+      [
+        "EXPOSE 8000",
+        "Document the container port; does not publish it."
+      ],
+      [
+        "gunicorn --bind 0.0.0.0:8000",
+        "Listen on all container interfaces, port 8000."
+      ],
+      [
+        "--workers 2 --access-logfile -",
+        "Two workers; send access logs to stdout."
+      ],
+      [
+        "app:app",
+        "Python module : application object, not an image tag."
+      ]
+    ],
+    "bottom": "CMD in the Dockerfile uses a JSON argument list to launch this server at runtime.",
+    "notes": "CMD is the default startup command. Each JSON string is an argument; no shell expansion occurs. --bind takes a listening address, --workers takes a count, --access-logfile takes a destination, and - means stdout here. 0.0.0.0 inside a container is distinct from the host loopback binding. Source: repository Dockerfile; https://docs.docker.com/reference/dockerfile/ ."
+  },
+  {
+    "title": "One app, two services",
+    "layout": "code-pairs",
+    "section": "05 / DOCKER COMPOSE",
+    "rows": [
+      [
+        "web:\n  build: .",
+        "Service name / build from this project directory."
+      ],
+      [
+        "redis:\n  image: redis:7.4-alpine",
+        "Service name / use the ready-made tagged image."
+      ],
+      [
+        "127.0.0.1:8000:8000",
+        "Host IP : host port : container port."
+      ],
+      [
+        "REDIS_HOST: redis",
+        "Web reaches Redis by its Compose service name."
+      ],
+      [
+        "counter-data:/data",
+        "Named volume : mount path inside Redis."
+      ]
+    ],
+    "bottom": "depends_on + service_healthy waits for initial readiness; later failures still need handling.",
+    "notes": "Show compose.yaml. services groups service definitions; environment sets variables; ports publishes the web port; volumes declares persistent storage. Redis has no published host port. redis-server --appendonly yes enables persistence; --appendfsync always syncs writes for this small demo. Health checks run redis-cli ping and Python urllib on /health. CMD executes directly; interval/timeout/retries control probing. Full settings decoded in docs/commands.md. https://docs.docker.com/compose/how-tos/startup-order/"
+  },
+  {
+    "title": "Installation routes",
+    "layout": "contrast",
+    "section": "06 / INSTALLATION",
+    "left": [
+      "DOCKER DESKTOP",
+      "Windows, macOS or supported Linux.\n\nEngine + CLI + Buildx + Compose\nwith a graphical dashboard."
+    ],
+    "right": [
+      "NATIVE LINUX ENGINE",
+      "Install individual packages.\n\nCLI + daemon + runtime + plugins.\nUseful on workstations and servers."
+    ],
+    "bottom": "A Docker CLI alone cannot run containers without access to an engine.",
+    "notes": "Choose one route before class. Desktop is convenient for Windows/macOS. Native Engine is useful on Linux workstations and servers. A CLI alone cannot run containers without an accessible engine. Full prerequisites and commands: docs/installation.md. Sources: https://docs.docker.com/engine/install/ubuntu/ ; https://docs.docker.com/desktop/setup/install/linux/"
+  },
+  {
+    "title": "Desktop setup by operating system",
+    "layout": "rows",
+    "section": "06 / INSTALLATION",
+    "rows": [
+      [
+        "Windows",
+        "Supported WSL 2, hardware virtualization, Linux containers.\nEnable integration for the WSL distro you will use."
+      ],
+      [
+        "macOS",
+        "Download for Apple silicon or Intel.\nOpen the installer, install and launch Docker."
+      ],
+      [
+        "Linux",
+        "Supported distro + KVM.\nDesktop runs a separate VM and image store."
+      ]
+    ],
+    "bottom": "Launch Desktop and wait for the engine. Current requirements: docs/installation.md.",
+    "notes": "Verify the current supported OS versions and hardware requirements at the linked pages. Windows users working in WSL should enable integration for their distribution. macOS: open DMG, drag to Applications, launch. Linux: follow its distro-specific package guide; Desktop has a separate VM/context. Sources: https://docs.docker.com/desktop/setup/install/windows-install/ ; https://docs.docker.com/desktop/setup/install/mac-install/ ; https://docs.docker.com/desktop/setup/install/linux/ wsl --version prints its version; wsl --status reports its configuration. Full OS-specific setup is linked in docs/installation.md."
+  },
+  {
+    "title": "Native Linux packages",
+    "layout": "packages",
+    "section": "06 / INSTALLATION",
+    "code": "sudo apt install docker-ce docker-ce-cli containerd.io \\\n  docker-buildx-plugin docker-compose-plugin",
+    "rows": [
+      [
+        "docker-ce",
+        "Engine daemon"
+      ],
+      [
+        "docker-ce-cli",
+        "Docker command-line client"
+      ],
+      [
+        "containerd.io",
+        "Runtime stack"
+      ],
+      [
+        "docker-buildx-plugin",
+        "Build interface"
+      ],
+      [
+        "docker-compose-plugin",
+        "Compose plugin"
+      ]
+    ],
+    "bottom": "Ubuntu: apt install. Fedora: dnf install. Configure the matching official repository first.",
+    "notes": "The backslash continues the apt command onto the next shell line; this is one command. sudo runs as administrator; apt is Ubuntu’s package manager; install requests installation; following names are package arguments. Fedora uses sudo dnf install with the same names. Never use Ubuntu repository setup on Fedora. Backslash is a POSIX shell line continuation, not part of a package name. Full repository/key setup, systemctl enable --now docker and Linux group access are decoded in docs/installation.md. Sources: https://docs.docker.com/engine/install/ubuntu/ ; https://docs.docker.com/engine/install/fedora/ ."
+  },
+  {
+    "title": "Can this terminal use Docker?",
+    "layout": "code-pairs",
+    "section": "06 / INSTALLATION",
+    "rows": [
+      [
+        "docker version",
+        "Client + Server: CLI can reach an engine."
+      ],
+      [
+        "docker compose version",
+        "Compose plugin is available."
+      ],
+      [
+        "docker buildx version",
+        "Build plugin is available."
+      ],
+      [
+        "docker run --rm hello-world",
+        "run creates a container; --rm removes it on exit;\nhello-world is the image (default tag latest)."
+      ],
+      [
+        "docker context ls",
+        "List engine contexts; check which one is active."
+      ]
+    ],
+    "bottom": "Client only? Start the engine. Permission denied? Check native Linux access.",
+    "notes": "An additional check is docker info, which displays the selected engine’s details. version displays versions; context manages connection configurations; ls lists contexts; info shows engine details. Native Engine users may need sudo. Also git --version prints Git’s version. hello-world checks pull/run, not the project build/network. Sources: https://docs.docker.com/get-started/docker-overview/ ; https://docs.docker.com/engine/install/linux-postinstall/ ."
+  },
+  {
+    "title": "The command line has a grammar",
+    "layout": "command",
+    "section": "07 / EVERYDAY COMPOSE",
+    "code": "docker compose up -d --build",
+    "rows": [
+      [
+        "docker compose",
+        "Docker CLI + the Compose plugin. Reads compose.yaml."
+      ],
+      [
+        "up",
+        "Create and start the configured services."
+      ],
+      [
+        "-d",
+        "Detach: leave services running in the background."
+      ],
+      [
+        "--build",
+        "Build custom service images before starting."
+      ]
+    ],
+    "bottom": "No service argument here → run the app’s services together.",
+    "notes": "Standard local workflow. Unlike attached up, detached up returns the terminal. --build does not force downloading every newer base image. Optional automated alternative --wait waits for running/healthy and implies detached mode. Source: https://docs.docker.com/reference/cli/docker/compose/up/"
+  },
+  {
+    "title": "Container status",
+    "layout": "command",
+    "section": "07 / EVERYDAY COMPOSE",
+    "code": "docker compose ps -a",
+    "rows": [
+      [
+        "ps",
+        "List this project’s service containers and their status."
+      ],
+      [
+        "-a / --all",
+        "Include stopped containers as well as running ones."
+      ],
+      [
+        "Healthy vs running",
+        "Running means a process exists. Healthy means its probe passes."
+      ]
+    ],
+    "bottom": "Start with ps, then open http://localhost:8000 when both services are healthy.",
+    "notes": "docker compose prefix: CLI plus plugin. No service filter here, so inspect the project’s containers. In the initial check, plain ps is enough for running services. -a helps diagnose the stopped Redis exercise. Source: https://docs.docker.com/reference/cli/docker/compose/ps/"
+  },
+  {
+    "title": "Reading container logs",
+    "layout": "command",
+    "section": "07 / EVERYDAY COMPOSE",
+    "code": "docker compose logs -f --tail 20 web",
+    "rows": [
+      [
+        "logs",
+        "Show the containers’ output."
+      ],
+      [
+        "-f / --follow",
+        "Keep displaying new output as it arrives."
+      ],
+      [
+        "--tail 20",
+        "Start with the most recent 20 lines per container."
+      ],
+      [
+        "web",
+        "Service argument: show the web service only."
+      ]
+    ],
+    "bottom": "Ctrl+C exits this log viewer. Already-detached services continue running.",
+    "notes": "20 is a value for --tail, not a service name. Without -f this is a snapshot and exits. Without web, include all services. Compare Ctrl+C during attached docker compose up, which stops its attached app. Source: https://docs.docker.com/reference/cli/docker/compose/logs/"
+  },
+  {
+    "title": "A command inside a container",
+    "layout": "command",
+    "section": "07 / EVERYDAY COMPOSE",
+    "code": "docker compose exec redis redis-cli GET visits",
+    "rows": [
+      [
+        "exec",
+        "Run a process in an existing running service container."
+      ],
+      [
+        "redis",
+        "Service argument: choose the Redis container."
+      ],
+      [
+        "redis-cli",
+        "Program to execute inside that container."
+      ],
+      [
+        "GET visits",
+        "Redis command GET; key argument visits."
+      ]
+    ],
+    "bottom": "For a shell: docker compose exec web sh — web selects the service; sh is the program.",
+    "notes": "The program’s arguments begin after the service name. Compose exec allocates an interactive terminal by default. In sh, pwd prints working directory, printenv REDIS_HOST prints that variable, exit leaves the shell without stopping Gunicorn. -T disables terminal allocation in scripts. Source: https://docs.docker.com/reference/cli/docker/compose/exec/"
+  },
+  {
+    "title": "Build, pull, then run",
+    "layout": "code-pairs",
+    "section": "07 / EVERYDAY COMPOSE",
+    "rows": [
+      [
+        "docker compose build web",
+        "build creates the custom image; web selects the service."
+      ],
+      [
+        "docker compose pull redis",
+        "pull downloads the configured image; redis selects it."
+      ],
+      [
+        "docker compose up -d",
+        "Create/recreate and start services using the images."
+      ],
+      [
+        "docker compose images",
+        "List images used by created service containers."
+      ],
+      [
+        "docker compose config",
+        "Validate and print the resolved app configuration."
+      ]
+    ],
+    "bottom": "build and pull prepare images. They do not replace a running service by themselves.",
+    "notes": "docker compose = CLI + plugin throughout. -d = detach. A service argument selects a configured service, not an image repository. config --quiet validates without printing, useful in CI. Sources: https://docs.docker.com/reference/cli/docker/compose/build/ ; https://docs.docker.com/reference/cli/docker/compose/pull/ ; https://docs.docker.com/reference/cli/docker/compose/up/ ; https://docs.docker.com/reference/cli/docker/compose/images/ ; https://docs.docker.com/reference/cli/docker/compose/config/"
+  },
+  {
+    "title": "Stop, start or restart?",
+    "layout": "code-pairs",
+    "section": "07 / EVERYDAY COMPOSE",
+    "rows": [
+      [
+        "docker compose stop redis",
+        "Halt the Redis container. Keep the container."
+      ],
+      [
+        "docker compose start redis",
+        "Start that existing stopped Redis container."
+      ],
+      [
+        "docker compose restart web",
+        "Stop then start the existing web container."
+      ]
+    ],
+    "bottom": "restart does not rebuild an image or apply changed Compose configuration.\nAfter a source edit: docker compose up -d --build.",
+    "notes": "stop/start/restart are the actions; redis/web select services. start does not create a missing container. In up -d --build, -d detaches, --build builds configured images first, and up recreates the changed service. Sources: https://docs.docker.com/reference/cli/docker/compose/stop/ ; https://docs.docker.com/reference/cli/docker/compose/start/ ; https://docs.docker.com/reference/cli/docker/compose/restart/ ; https://docs.docker.com/reference/cli/docker/compose/up/"
+  },
+  {
+    "title": "A container is not its data",
+    "layout": "cleanup",
+    "section": "07 / EVERYDAY COMPOSE",
+    "left": [
+      "KEEP THE COUNT",
+      "docker compose down",
+      "Stops/removes the service containers\nand project network.\nKeeps our named volume."
+    ],
+    "right": [
+      "RESET DELIBERATELY",
+      "docker compose down --volumes",
+      "Same cleanup, plus removal of the\nproject’s declared named volume.\nThe saved count is deleted."
+    ],
+    "bottom": "A volume is persistent storage. It is not a backup.",
+    "notes": "docker compose = CLI + plugin; down is the cleanup action; --volumes (short -v here) adds volume removal. External volumes are not removed. No host-wide prune is needed. Source: https://docs.docker.com/reference/cli/docker/compose/down/"
+  },
+  {
+    "title": "Your first run",
+    "layout": "lab",
+    "section": "08 / THE LAB",
+    "code": "docker compose up -d --build",
+    "rows": [
+      [
+        "01 / Start",
+        "up creates/starts; -d detaches; --build builds first."
+      ],
+      [
+        "02 / Check",
+        "docker compose ps — list status; wait for healthy services."
+      ],
+      [
+        "03 / Explore",
+        "Open localhost:8000, click Add one, then refresh."
+      ]
+    ],
+    "bottom": "Before this: clone the repo and cd AF-P1-Docker. All commands run from that directory.",
+    "notes": "git clone URL downloads the repository; URL is the argument. cd changes the shell’s working directory to AF-P1-Docker. Full URL in README. Dockerfile builds web; Compose pulls Redis. Page GET reads, button POST increments atomically then redirects. Use docs/lab.md."
+  },
+  {
+    "title": "Three lab experiments",
+    "layout": "rows",
+    "section": "08 / THE LAB",
+    "rows": [
+      [
+        "Recreate",
+        "Record the count. down → up -d. Does it survive?"
+      ],
+      [
+        "Rebuild",
+        "Edit the heading. up -d --build. Why not just restart?"
+      ],
+      [
+        "Disconnect",
+        "stop redis → refresh → start redis. What does web report?"
+      ]
+    ],
+    "bottom": "Use docs/lab.md for commands and docs/commands.md for every token.",
+    "notes": "Arrows indicate an activity sequence, not literal shell syntax. Every phrase expands to docker compose plus the shown action/options. down removes containers/network but retains our volume; up -d recreates detached; --build incorporates source edits; restart does not; stop/start operate existing Redis container. App returns 503 during outage then recovers. Follow request path browser → published port → web → redis:6379. Source: repository lab and app."
+  },
+  {
+    "title": "Image, container, volume",
+    "layout": "exit",
+    "section": "08 / THE LAB",
+    "rows": [
+      [
+        "Image",
+        "What files and defaults have we packaged?"
+      ],
+      [
+        "Container",
+        "What running instance did we create?"
+      ],
+      [
+        "Volume",
+        "Which data survives container removal?"
+      ]
+    ],
+    "bottom": "Finish with docker compose down — keep the counter; free the port.",
+    "notes": "Answer: image = packaged files/default startup metadata; container = runnable instance with writable layer/runtime config; volume = storage independent of container removal. Ask which kernel is used on Mac (Linux in Desktop environment/VM). Ask whether redis:6379 is an image tag (no: host and port). down stops/removes containers/network while preserving our named volume. Sources: https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-an-image/ ; https://docs.docker.com/reference/cli/docker/compose/down/"
+  }
+]

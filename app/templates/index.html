@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1220">
+  <title>Container Lab · App Factory</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <a class="skip-link" href="#counter">Skip to the counter</a>
+  <div class="shell">
+    <header class="masthead">
+      <a class="brand" href="#"><span class="brand-mark" aria-hidden="true">af.</span> APP FACTORY <span class="muted">/ CONTAINER LAB</span></a>
+      <nav aria-label="Page sections"><a href="#under-hood">The architecture</a><a href="#commands">Command guide ↗</a></nav>
+    </header>
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="dot" aria-hidden="true"></span> LAB 01 — INTRODUCTION TO DOCKER</p>
+          <h1 id="page-title">Works on<br><em>our machines.</em></h1>
+          <p class="intro">Same app. Same dependencies. A little less<br> “but it worked on my laptop.”</p>
+          <p class="hero-caption">BUILD AN IMAGE <span>→</span> RUN TWO SERVICES <span>→</span> KEEP YOUR DATA</p>
+        </div>
+        <figure class="hero-art"><img src="{{ url_for('static', filename='classroom.png') }}" alt="Illustration of different laptops displaying the same packaged application"><figcaption>One application. Different laptops.</figcaption></figure>
+      </section>
+      <section class="experiment" id="counter" aria-labelledby="counter-title">
+        <div class="counter-panel">
+          <div class="panel-top"><p class="eyebrow">THE SHARED COUNTER</p><span class="small-label">01 / INTERACT</span></div>
+          <h2 id="counter-title">Make a change.<br>See where it lives.</h2>
+          <div class="counter-value"><p class="count" aria-label="Counter value">{{ count }}</p><span>increments stored<br>in Redis</span></div>
+          <form action="/count" method="post"><button type="submit"><span aria-hidden="true">＋</span> Add one <span class="button-arrow" aria-hidden="true">↗</span></button></form>
+          <p class="counter-footnote">Clicking writes to Redis. Refreshing only reads.<br>Your classmates each run their own local counter.</p>
+        </div>
+        <div class="trace-panel">
+          <p class="eyebrow">02 / FOLLOW THE REQUEST</p>
+          <ol class="request-path">
+            <li><span class="step">01</span><div><h3>Your browser</h3><p>POST <code>/count</code> on <code>localhost:8000</code></p></div></li>
+            <li><span class="step">02</span><div><h3>Python / web</h3><p>Our custom image handles the request.</p></div></li>
+            <li><span class="step">03</span><div><h3>Redis / data</h3><p><code>INCR visits</code> adds one atomically.</p></div></li>
+            <li><span class="step">04</span><div><h3>Back to the page</h3><p>A redirect loads the new value.</p></div></li>
+          </ol>
+          <div class="prediction"><span class="coral">PREDICT BEFORE YOU TYPE</span><p>If you remove both containers,<br>will your count survive?</p><a href="#under-hood">Find the clue below ↓</a></div>
+        </div>
+      </section>
+      <section class="architecture" id="under-hood" aria-labelledby="architecture-title">
+        <div class="section-heading"><p class="eyebrow">03 / UNDER THE HOOD</p><h2 id="architecture-title">Two services.<br>One conversation.</h2><p>Compose connects the services on a private network.<br>The browser enters through one published port.</p></div>
+        <div class="service-map">
+          <article class="service"><span class="service-index" aria-hidden="true">01</span><p class="eyebrow">BUILT HERE</p><h3>web<span>:8000</span></h3><p>Python + Flask + Gunicorn</p><code>build: .</code><p class="service-note">Our Dockerfile packages the app.<br>The dot means the project directory.</p></article>
+          <div class="connection"><span aria-hidden="true">→</span><code>redis:6379</code><small>service name + port</small></div>
+          <article class="service redis"><span class="service-index" aria-hidden="true">02</span><p class="eyebrow">PULLED FROM DOCKER HUB</p><h3>redis<span>:6379</span></h3><p>A ready-made data service</p><code>redis:7.4-alpine</code><p class="service-note">Redis 7.4 on an Alpine Linux base.<br>A tag selects a version or variant.</p></article>
+        </div>
+        <div class="volume-strip"><span class="volume-symbol" aria-hidden="true">↳</span><div><strong>counter-data</strong><p>A named volume stores Redis files at <code>/data</code>. Container removed? Files stay. Volume removed? The counter is gone.</p></div><span class="volume-label">PERSISTENT STORAGE</span></div>
+      </section>
+      <section class="commands" id="commands" aria-labelledby="commands-title">
+        <div class="section-heading"><p class="eyebrow">04 / YOUR TERMINAL</p><h2 id="commands-title">A few commands.<br>A working mental model.</h2><p>Run these from the repository root.<br>Expand a command to understand every part.</p></div>
+        <div class="command-list">
+          <details open><summary><span class="command-purpose">START</span><code>docker compose up -d --build</code><span class="expand" aria-hidden="true">＋</span></summary><p><code>docker</code> is the CLI. <code>compose</code> manages the app in <code>compose.yaml</code>. <code>up</code> creates and starts services. <code>-d</code> runs them in the background. <code>--build</code> builds the custom image before starting. No service argument means both services.</p></details>
+          <details><summary><span class="command-purpose">INSPECT</span><code>docker compose ps -a</code><span class="expand" aria-hidden="true">＋</span></summary><p><code>ps</code> lists service containers and their status. <code>-a</code> means all, including stopped containers. Running is different from healthy: inspect the health status too.</p></details>
+          <details><summary><span class="command-purpose">WATCH</span><code>docker compose logs -f --tail 20 web</code><span class="expand" aria-hidden="true">＋</span></summary><p><code>logs</code> displays output. <code>-f</code> follows new output. <code>--tail 20</code> starts with the last 20 lines per container. <code>web</code> selects the service. Press <kbd>Ctrl</kbd> + <kbd>C</kbd> to leave the log viewer; the services keep running.</p></details>
+          <details><summary><span class="command-purpose">LOOK INSIDE</span><code>docker compose exec redis redis-cli GET visits</code><span class="expand" aria-hidden="true">＋</span></summary><p><code>exec</code> runs a command in an existing container. <code>redis</code> selects the service. <code>redis-cli</code> is the program inside it. <code>GET</code> is a Redis command and <code>visits</code> is its key argument.</p></details>
+          <details><summary><span class="command-purpose">CLEAN UP</span><code>docker compose down</code><span class="expand" aria-hidden="true">＋</span></summary><p><code>down</code> stops and removes this project's service containers and network. It keeps the named volume and counter. Adding <code>--volumes</code> deletes the project's named volume and its data: use that only for a deliberate reset.</p></details>
+        </div>
+        <p class="command-hint">Changed the page? Run <code>docker compose up -d --build</code> again. A restart alone does not rebuild an image.</p>
+      </section>
+    </main>
+    <footer><span class="brand">APP FACTORY <span class="muted">/ LEARN BY BUILDING</span></span><p>A local teaching demo · Python + Redis · Docker Compose</p></footer>
+  </div>
+</body>
+</html>

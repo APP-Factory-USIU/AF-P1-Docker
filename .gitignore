@@ -205,6 +205,10 @@ cython_debug/
 # Temporary file for partial code execution
 tempCodeRunnerFile.py
 
+# Local slide review exports
+.slide-previews/
+.slide-build/
+
 # Ruff stuff:
 .ruff_cache/
 

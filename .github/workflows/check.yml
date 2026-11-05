@@ -1,0 +1,13 @@
+name: Check classroom demo
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose config --quiet
+      - run: docker compose up --build --wait
+      - run: docker compose run --rm --no-deps -v "$PWD:/workspace:ro" -w /workspace web python -m unittest discover -s tests -v
+      - run: python3 tests/smoke.py
+      - if: always()
+        run: docker compose logs && docker compose down --volumes
