@@ -19,7 +19,10 @@ docker compose logs -f --tail 20 web
 A **command** asks for an action. An **option/flag** changes that action; some
 options take a value. An **argument** identifies a target or input. An image
 **tag** selects an image version or variant; it is not a command-line flag.
-Commands below run from the repository root, where Compose finds `compose.yaml`.
+This is a reference, not the first step of the lab. The checkout deliberately
+has no root Docker configuration. Write those files using [lab.md](lab.md)
+before running the Compose commands below. Completed examples are in `solutions/`.
+Commands run from the repository root, where Compose finds your `compose.yaml`.
 `web` and `redis` are the **service names in that file**, not image tags or fixed
 container IDs. Omitting an optional service argument usually targets all services
 relevant to that command.
@@ -130,6 +133,25 @@ The startup command is `gunicorn --bind 0.0.0.0:8000 --workers 2 --access-logfil
 to standard output so Compose can show them; `app:app` means the `app` object
 inside the Python module `app`, not an image tag.
 
+## Before Compose: build and run your image
+
+| Command | Every action, option and argument |
+| --- | --- |
+| `docker build -t classroom-web:workshop .` | `build` builds from a Dockerfile; `-t` (`--tag`) takes the image identifier `classroom-web:workshop`; `classroom-web` is the local repository name, `workshop` its tag; `.` selects the current directory as build context. |
+| `docker images classroom-web` | `images` lists local images; `classroom-web` filters by repository name. Check the TAG column for `workshop`. |
+| `docker run --rm -p 127.0.0.1:8000:8000 classroom-web:workshop` | `run` creates an attached container; `--rm` removes it after exit; `-p` (`--publish`) takes host IP : host port : container port; the last argument selects your image/tag. Ctrl+C stops this attached process. |
+| `curl -i http://localhost:8000/health` | Request the URL; `-i` includes HTTP headers, so the lab's expected standalone 503 is visible. A successful build does not mean Redis is reachable. |
+
+The standalone web container intentionally has no Redis dependency configured.
+Its default `REDIS_HOST=localhost` refers to itself, so `/health` returns 503.
+Your later Compose file explicitly supplies `REDIS_HOST: redis`. On the native
+baseline, localhost instead refers to the laptop where Redis is running.
+
+The `.dockerignore` exercise uses `*` to exclude files and `!` to include exceptions.
+`!app/` includes the directory and `!app/**` includes its contents; final patterns
+exclude bytecode/cache files. It applies to the build context, not the container
+working directory and not Git's tracking rules.
+
 ## Checks and advanced test command
 
 | Command | Meaning |
@@ -171,6 +193,12 @@ docker compose run --rm --no-deps -v "$PWD:/workspace:ro" -w /workspace web pyth
   whereas an interactive `exec web sh` normally wants a terminal.
 - A Compose-wide `-p af-p1-docker-check` before the subcommand selects an isolated
   project name for local verification. It is not a port mapping.
+- For an older running checkout, `docker compose -f solutions/compose.yaml --project-directory . down`
+  selects the moved file with `-f`, keeps the root path/project name with
+  `--project-directory .`, then stops/removes its containers/network with `down`.
+  This preserves its named volume. Here `-f` means file; after `logs` it means follow.
+  This cleanup does not require a root Dockerfile; starting the reference still
+  requires copying its three files into the root as described in `solutions/README.md`.
 
 ## Sources
 
@@ -187,3 +215,6 @@ Checked against the official CLI references on 5 November 2026:
 [run](https://docs.docker.com/reference/cli/docker/compose/run/),
 [image references](https://docs.docker.com/reference/cli/docker/image/tag/),
 [Dockerfile](https://docs.docker.com/reference/dockerfile/).
+For the pre-Compose stage, see [build](https://docs.docker.com/reference/cli/docker/buildx/build/),
+[run](https://docs.docker.com/reference/cli/docker/container/run/), and
+[build context and dockerignore](https://docs.docker.com/build/concepts/context/).

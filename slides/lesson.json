@@ -266,33 +266,33 @@
     "notes": "Image syntax: https://docs.docker.com/reference/cli/docker/image/tag/ ; image variants: https://hub.docker.com/_/python ; https://hub.docker.com/_/redis . Tags may change. Omitting a tag defaults to latest, which is not a promise of newest. Digests pin content. redis:6379 is a host:port address, not an image tag."
   },
   {
-    "title": "Our Dockerfile, decoded",
+    "title": "Your first Dockerfile",
     "layout": "code-pairs",
     "section": "05 / DOCKER",
     "rows": [
       [
-        "FROM python:3.13-slim",
-        "Base image: repository + version/variant tag."
+        "FROM _____",
+        "Which image provides Python 3.13 slim?"
       ],
       [
-        "WORKDIR /app",
-        "Working directory inside the image."
+        "WORKDIR _____",
+        "Where should the app live inside the image?"
       ],
       [
-        "COPY requirements.txt .",
-        "Source file → current working directory."
+        "COPY _____ _____",
+        "Which file lists dependencies? Copy it first."
       ],
       [
-        "RUN pip install --no-cache-dir \\\n    -r requirements.txt",
-        "Install at build time; skip pip’s cache.\n-r reads requirements.txt."
+        "RUN _____",
+        "Install requirements with pip; explain -r and the cache."
       ],
       [
-        "COPY app/ .",
-        "Copy app source into that working directory."
+        "COPY _____ _____",
+        "Put app.py, templates and static together."
       ]
     ],
-    "bottom": "Requirements come first so source-only edits can reuse the dependency-install layer.",
-    "notes": "Explain FROM, WORKDIR, COPY and RUN. Dot is the destination. --no-cache-dir affects pip, not Docker’s build cache. The backslash continues the Dockerfile instruction onto the next line; the repository uses one line for that RUN instruction. Source: repository Dockerfile; https://docs.docker.com/reference/dockerfile/ . Full breakdown: docs/commands.md."
+    "bottom": "Create Dockerfile at the repository root. Finish USER, EXPOSE and CMD using the lab.",
+    "notes": "Student exercise, not a finished file to run. Begin with app/app.py and requirements.txt. Main checkout intentionally lacks root Dockerfile, .dockerignore and compose.yaml. Students fill the scaffold in docs/lab.md and explain each instruction; complete reference is in solutions/Dockerfile after attempting. COPY requirements.txt . precedes RUN pip install --no-cache-dir -r requirements.txt; COPY app/ . follows. WORKDIR /app, base python:3.13-slim. Next slide explains runtime flags for their CMD. Reference: https://docs.docker.com/reference/dockerfile/ ."
   },
   {
     "title": "Starting the web process",
@@ -324,33 +324,33 @@
     "notes": "CMD is the default startup command. Each JSON string is an argument; no shell expansion occurs. --bind takes a listening address, --workers takes a count, --access-logfile takes a destination, and - means stdout here. 0.0.0.0 inside a container is distinct from the host loopback binding. Source: repository Dockerfile; https://docs.docker.com/reference/dockerfile/ ."
   },
   {
-    "title": "One app, two services",
+    "title": "Write the two-service Compose file",
     "layout": "code-pairs",
     "section": "05 / DOCKER COMPOSE",
     "rows": [
       [
-        "web:\n  build: .",
-        "Service name / build from this project directory."
+        "web:\n  build: _____",
+        "Which directory contains your Dockerfile?"
       ],
       [
-        "redis:\n  image: redis:7.4-alpine",
-        "Service name / use the ready-made tagged image."
+        "ports: [\"_____\"]",
+        "Publish web only: host loopback → port 8000."
       ],
       [
-        "127.0.0.1:8000:8000",
-        "Host IP : host port : container port."
+        "REDIS_HOST: _____",
+        "Use the other service name, not localhost."
       ],
       [
-        "REDIS_HOST: redis",
-        "Web reaches Redis by its Compose service name."
+        "redis:\n  image: _____",
+        "Select Redis 7.4 on Alpine using its image tag."
       ],
       [
-        "counter-data:/data",
-        "Named volume : mount path inside Redis."
+        "docker compose config",
+        "Validate your YAML before starting anything."
       ]
     ],
-    "bottom": "depends_on + service_healthy waits for initial readiness; later failures still need handling.",
-    "notes": "Show compose.yaml. services groups service definitions; environment sets variables; ports publishes the web port; volumes declares persistent storage. Redis has no published host port. redis-server --appendonly yes enables persistence; --appendfsync always syncs writes for this small demo. Health checks run redis-cli ping and Python urllib on /health. CMD executes directly; interval/timeout/retries control probing. Full settings decoded in docs/commands.md. https://docs.docker.com/compose/how-tos/startup-order/"
+    "bottom": "Create compose.yaml in the root. Add persistence and health checks in later exercises.",
+    "notes": "Students create compose.yaml from the scaffold in docs/lab.md. Keep exactly two services, web and redis. Minimal stage: build ., ports 127.0.0.1:8000:8000, REDIS_HOST redis, image redis:7.4-alpine. Initial startup may need a moment for Redis; health checks come later. Do not publish Redis. config validates/prints resolved YAML. Main checkout intentionally lacks an active Compose file; solutions/compose.yaml is an instructor answer key. Later tasks add counter-data:/data, AOF, healthchecks and depends_on service_healthy. Source: repository lab and https://docs.docker.com/reference/cli/docker/compose/config/ ."
   },
   {
     "title": "Installation routes",
@@ -471,7 +471,7 @@
       ]
     ],
     "bottom": "No service argument here → run the app’s services together.",
-    "notes": "Standard local workflow. Unlike attached up, detached up returns the terminal. --build does not force downloading every newer base image. Optional automated alternative --wait waits for running/healthy and implies detached mode. Source: https://docs.docker.com/reference/cli/docker/compose/up/"
+    "notes": "Run this only after students have written compose.yaml. Standard local workflow. Unlike attached up, detached up returns the terminal. --build does not force downloading every newer base image. Optional automated alternative --wait waits for running/healthy and implies detached mode. Source: https://docs.docker.com/reference/cli/docker/compose/up/"
   },
   {
     "title": "Container status",
@@ -615,47 +615,46 @@
     "notes": "docker compose = CLI + plugin; down is the cleanup action; --volumes (short -v here) adds volume removal. External volumes are not removed. No host-wide prune is needed. Source: https://docs.docker.com/reference/cli/docker/compose/down/"
   },
   {
-    "title": "Your first run",
-    "layout": "lab",
-    "section": "08 / THE LAB",
-    "code": "docker compose up -d --build",
-    "rows": [
-      [
-        "01 / Start",
-        "up creates/starts; -d detaches; --build builds first."
-      ],
-      [
-        "02 / Check",
-        "docker compose ps — list status; wait for healthy services."
-      ],
-      [
-        "03 / Explore",
-        "Open localhost:8000, click Add one, then refresh."
-      ]
-    ],
-    "bottom": "Before this: clone the repo and cd AF-P1-Docker. All commands run from that directory.",
-    "notes": "git clone URL downloads the repository; URL is the argument. cd changes the shell’s working directory to AF-P1-Docker. Full URL in README. Dockerfile builds web; Compose pulls Redis. Page GET reads, button POST increments atomically then redirects. Use docs/lab.md."
-  },
-  {
-    "title": "Three lab experiments",
+    "title": "Three files you create",
     "layout": "rows",
     "section": "08 / THE LAB",
     "rows": [
       [
-        "Recreate",
-        "Record the count. down → up -d. Does it survive?"
+        "Dockerfile",
+        "Choose the base, paths, dependency install and startup command."
       ],
       [
-        "Rebuild",
-        "Edit the heading. up -d --build. Why not just restart?"
+        ".dockerignore",
+        "Choose which files enter the build context. Then build and run."
       ],
       [
-        "Disconnect",
-        "stop redis → refresh → start redis. What does web report?"
+        "compose.yaml",
+        "Build web, pull Redis and connect the services."
       ]
     ],
-    "bottom": "Use docs/lab.md for commands and docs/commands.md for every token.",
-    "notes": "Arrows indicate an activity sequence, not literal shell syntax. Every phrase expands to docker compose plus the shown action/options. down removes containers/network but retains our volume; up -d recreates detached; --build incorporates source edits; restart does not; stop/start operate existing Redis container. App returns 503 during outage then recovers. Follow request path browser → published port → web → redis:6379. Source: repository lab and app."
+    "bottom": "No active Docker configuration is supplied in the main checkout. Start in docs/lab.md.",
+    "notes": "Students author three root files. Completed reference is isolated in solutions/ and CI materializes it only in its disposable checkout. First build: docker build -t classroom-web:workshop . ; build creates image, -t assigns repository:tag, final dot is context. First run: docker run --rm -p 127.0.0.1:8000:8000 classroom-web:workshop; --rm removes after exit, -p publishes IP:host-port:container-port. Standalone /health returns 503 because Redis is absent; a crash is not a passing checkpoint. Stop attached run with Ctrl+C before Compose uses port 8000. https://docs.docker.com/reference/cli/docker/buildx/build/ ; https://docs.docker.com/reference/cli/docker/container/run/"
+  },
+  {
+    "title": "Improve the files you wrote",
+    "layout": "rows",
+    "section": "08 / THE LAB",
+    "rows": [
+      [
+        "Persist",
+        "Observe lost state, then add a named volume and Redis AOF."
+      ],
+      [
+        "Check readiness",
+        "Add health checks and wait for healthy Redis at startup."
+      ],
+      [
+        "Change and diagnose",
+        "Rebuild an edit. Stop Redis, inspect logs, then recover."
+      ]
+    ],
+    "bottom": "Predict the outcome, change one thing, run it, then explain the evidence.",
+    "notes": "Use docs/lab.md. First minimal Compose has no named volume: down/up loses the old count. Add top-level counter-data volume, mount /data, and redis-server --appendonly yes --appendfsync always. Then configure Redis ping health, web urllib /health health, depends_on redis condition service_healthy. Rebuild after HTML edit using up -d --build; restart alone does not update the image. Stop/start redis demonstrates 503 and recovery. down removes containers/network but retains named data; --volumes explicitly deletes it. Compare solutions only after attempting each checkpoint."
   },
   {
     "title": "Image, container, volume",
@@ -676,6 +675,6 @@
       ]
     ],
     "bottom": "Finish with docker compose down — keep the counter; free the port.",
-    "notes": "Answer: image = packaged files/default startup metadata; container = runnable instance with writable layer/runtime config; volume = storage independent of container removal. Ask which kernel is used on Mac (Linux in Desktop environment/VM). Ask whether redis:6379 is an image tag (no: host and port). down stops/removes containers/network while preserving our named volume. Sources: https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-an-image/ ; https://docs.docker.com/reference/cli/docker/compose/down/"
+    "notes": "Have pairs show their own root Dockerfile, .dockerignore and compose.yaml before explaining the concepts. Answer: image = packaged files/default startup metadata; container = runnable instance with writable layer/runtime config; volume = storage independent of container removal. Ask which kernel is used on Mac (Linux in Desktop environment/VM). Ask whether redis:6379 is an image tag (no: host and port). down stops/removes containers/network while preserving our named volume. Sources: https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-an-image/ ; https://docs.docker.com/reference/cli/docker/compose/down/"
   }
 ]

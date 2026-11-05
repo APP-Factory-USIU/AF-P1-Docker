@@ -5,7 +5,7 @@ from flask import Flask, jsonify, redirect, render_template, url_for
 
 app = Flask(__name__)
 store = redis.Redis(
-    host=os.environ.get("REDIS_HOST", "redis"),
+    host=os.environ.get("REDIS_HOST", "localhost"),
     port=6379,
     decode_responses=True,
     socket_connect_timeout=2,
@@ -33,4 +33,4 @@ def health():
 @app.errorhandler(redis.RedisError)
 def redis_unavailable(error):
     app.logger.warning("Redis unavailable: %s", error)
-    return "Redis is unavailable. Check docker compose ps and logs.\n", 503
+    return "Redis is unavailable. Check the Redis host and service logs.\n", 503

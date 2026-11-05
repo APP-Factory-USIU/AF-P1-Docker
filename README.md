@@ -1,98 +1,87 @@
 # Docker: works on our machines
 
-A first Docker workshop for university students. Build one image, pull another,
-and run a web app with persistent data. No local Python or Redis installation needed.
+**You receive the application. You write its Docker configuration.**
 
-## Before class
+This workshop turns an existing Python web app into a two-service application:
+our custom web image plus an official Redis image. The counter and UI are ready;
+the root `Dockerfile`, `.dockerignore`, and `compose.yaml` are intentionally absent.
+You will create them during the lab.
 
-Install Git and either Docker Desktop or Docker Engine with Compose.
-Follow [the installation guide](docs/installation.md), then run its sanity checks.
-Allow time and internet access for the first image downloads.
+## Start here
 
-## Run the app
+1. Install Git and Docker using [the setup guide](docs/installation.md).
+2. Clone the repository and open it in your editor:
+
+   ```sh
+   git clone https://github.com/APP-Factory-USIU/AF-P1-Docker.git
+   cd AF-P1-Docker
+   ```
+
+3. Follow [the hands-on lab](docs/lab.md). Each stage has a scaffold, hints,
+   a command to try, and an observable checkpoint.
+
+**Do not start with `docker compose up`. There is no Compose file until you write one.**
+If you have a previous version of this workshop running, stop it before the lab
+so host port 8000 is available. Do not delete its volumes unless you want to lose its count.
+After updating an older checkout to this starter, you can stop that existing
+stack from the root with:
 
 ```sh
-git clone https://github.com/APP-Factory-USIU/AF-P1-Docker.git
-cd AF-P1-Docker
-docker compose up -d --build
-docker compose ps
+docker compose -f solutions/compose.yaml --project-directory . down
 ```
 
-`up` creates/starts the services; `-d` keeps them in the background; `--build`
-builds the custom web image first. `ps` shows status: wait for both services to
-be healthy, then open **http://localhost:8000**. Click **Add one**, then refresh: a refresh only
-reads the count. The button sends a POST that increments Redis atomically.
+`-f` selects the moved configuration; `--project-directory .` keeps the original
+root project name/path; `down` stops/removes its containers and network, keeping
+the named volume. This is a migration cleanup command, not the way to start the
+answer key; see [solutions/README.md](solutions/README.md) for that.
 
-```sh
-docker compose ps
-docker compose logs --tail 20 web
-docker compose exec redis redis-cli GET visits
-```
+## What you will build
 
-## Two services
-
-| Service | Image source | Responsibility |
+| Stage | You create | You prove |
 | --- | --- | --- |
-| `web` | Built from our `Dockerfile` using `python:3.13-slim` | Flask page served by Gunicorn on port 8000 |
-| `redis` | Pulled unchanged: `redis:7.4-alpine` | Counter storage on port 6379 inside the Compose network |
+| 1 | An understanding of the app's runtime and dependencies | Identify Python, the HTTP port, Redis, and its configuration. |
+| 2 | `Dockerfile` | Build a tagged custom image, then run its web process. |
+| 3 | `.dockerignore` | Keep source dependencies in the build context and local/private files out. |
+| 4 | `compose.yaml` | Build web, pull Redis, publish one port, and connect the services. |
+| 5 | Redis persistence and health checks | The count survives recreation and startup waits for readiness. |
+| 6 | A change and a failure you can explain | Rebuild after an edit; diagnose and recover from a Redis outage. |
 
-The browser connects to the published loopback port `127.0.0.1:8000`.
-The web container reaches Redis by service name `redis:6379`; `localhost` inside
-the web container means the web container itself. Redis has no published host port.
-Compose creates a network and a named `counter-data` volume automatically.
-Health checks wait for Redis before starting the web service.
+The image tag, port mapping, working directory and startup command are decisions
+you make from the application's requirements. A successful build is only one checkpoint.
 
-## Learn by changing things
+## Repository layout
 
-Work through [the student lab](docs/lab.md). Present with
-[the deck](slides/docker-introduction.pptx) and use
-[the facilitator guide](docs/teaching-guide.md) for timing, answers, and preparation.
-The editable slide content and speaker notes are also in [slides/lesson.json](slides/lesson.json).
-The [command guide](docs/commands.md) explains every command, option, argument,
-image tag, Dockerfile instruction, and Compose setting used here. The web app
-also has an expandable guide to the everyday Compose workflow.
-
-## Stop or reset
-
-```sh
-docker compose down
-docker compose up -d
+```text
+app/                 Working Flask app, templates and static assets
+requirements.txt     Python dependencies
+README.md            Workshop entry point
+docs/lab.md          Student exercises and checkpoints
+docs/commands.md     Commands, arguments, flags and image tags explained
+docs/installation.md Docker setup plus an optional native baseline
+solutions/           Instructor answer key; open after attempting the exercises
+slides/              Presentation and editable lesson content
+tests/               Unit tests and an HTTP-to-Redis smoke check
 ```
 
-The count survives because Redis writes to a named volume. To deliberately erase
-**this project's counter**, stop the project and remove its volume:
+Your completed files belong in the **repository root**, alongside `requirements.txt`.
+No branches, reset script or file-deletion command is required to begin.
 
-```sh
-docker compose down --volumes
-```
+## Learning resources
 
-Do not use `--volumes` if you want to keep the count. There is no need to prune
-all of Docker to clean up this workshop.
+- [Student lab](docs/lab.md): the main workshop path.
+- [Command guide](docs/commands.md): use when a token in a command is unfamiliar.
+- [Slide deck](slides/docker-introduction.pptx): concepts and practical prompts.
+- [Facilitator guide](docs/teaching-guide.md): timing, checkpoints and common mistakes.
+- [Instructor solution](solutions/README.md): a completed reference and CI setup.
 
-## Check the project
+The practical structure follows the scaffold-and-checkpoint approach in the
+[earlier App Factory workshop](https://github.com/APP-Factory-USIU/docker-workshop/blob/main/docs/DOCKER_PRACTICAL.md),
+while retaining this workshop's two-service scope.
 
-With the app running, test the full HTTP-to-Redis path (Python 3 required only for this check):
+## Scope
 
-```sh
-python3 tests/smoke.py
-```
-
-Run unit tests with the image's installed dependencies (POSIX shell):
-
-```sh
-docker compose run --rm --no-deps -v "$PWD:/workspace:ro" -w /workspace web python -m unittest discover -s tests -v
-```
-
-On PowerShell use `${PWD}` in place of `$PWD`. GitHub Actions runs both checks.
-
-## Teaching scope
-
-This is a local classroom demo: no accounts, authentication, or production deployment.
-Redis is unauthenticated within the project network. Keep the loopback binding.
-The direct Python requirements are pinned; image tags and transitive dependencies
-can change. For repeatable assessed labs, record image digests and lock the full
-dependency set. Redis uses synchronous AOF writes here to make the persistence
-exercise predictable at classroom scale, at the expense of write throughput.
-
-Sources and installation links are in [docs/installation.md](docs/installation.md)
-and the deck's speaker notes. Existing MIT license retained for this repository's code.
+This is a local teaching app, without accounts or authentication. Keep web bound
+to host loopback and Redis unpublished. Each laptop has its own counter.
+Image tags and transitive dependencies can change; freeze digests and a full lock
+file for an assessed lab requiring identical dependency contents. The reference
+uses Redis AOF storage on a named volume; persistence is not a backup.

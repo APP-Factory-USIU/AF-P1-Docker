@@ -1,123 +1,253 @@
-# Student lab: two services, one counter
+# Student lab: write the Docker files
 
-Work in pairs. One person types, the other predicts the result. Swap halfway.
-Run commands from the repository root. Complete the installation checks first.
-Keep [the command guide](commands.md) open: it decodes every flag, argument,
-image tag, Dockerfile instruction, and Compose setting used in this workshop.
+Work in pairs. One person types, one predicts and checks; swap after the first
+image builds. The application is supplied. **You create `Dockerfile`,
+`.dockerignore`, and `compose.yaml` at the repository root.**
 
-## 1. Build and pull (5 minutes)
+Keep [commands.md](commands.md) nearby. The completed files in `solutions/` are
+an answer key to compare with after your attempt, not the starting instructions.
+Allow 60–90 minutes for the practical after the theory discussion.
 
-Read `Dockerfile` and `compose.yaml`. Which service has `build:`? Which has `image:`?
+## 1. Explore the application (5 minutes)
+
+Open `app/app.py`, `requirements.txt`, and `app/templates/index.html`.
+
+Before writing Docker configuration, answer:
+
+1. Which runtime and Python packages must the web image contain?
+2. Which route reads the counter? Which route changes it?
+3. What environment variable selects the Redis hostname?
+4. What must `/health` successfully contact before it reports success?
+5. Which host and port should the HTTP server listen on inside a container?
+
+The web process will use Gunicorn on container port **8000**. Redis listens on
+**6379**. You can optionally run the native baseline in [installation.md](installation.md#optional-run-the-app-without-containerizing-it)
+to experience the dependency setup Docker will package. Local Python and Redis
+installation are not required for the container lab itself.
+
+**Checkpoint:** explain the browser → Python → Redis request path to your partner.
+
+## 2. Create the Dockerfile (10 minutes)
+
+Create `Dockerfile` in the root, with no filename extension. Fill the blanks:
+
+```dockerfile
+FROM _____
+
+WORKDIR _____
+COPY _____ _____
+RUN _____
+
+COPY _____ _____
+USER _____
+EXPOSE _____
+CMD ["_____", "_____", "_____", "_____", "_____", "_____", "_____", "_____"]
+```
+
+Constraints and hints:
+
+- Use the official Python **3.13 slim** image. Identify repository and tag.
+- Put the app in `/app`. Copy the requirements file there before the source.
+- Install requirements with pip. Use `-r` for the file and avoid pip's download
+  cache. Why should this `RUN` happen before copying application source?
+- Copy the **contents** of `app/` into the image working directory. That places
+  `app.py`, `templates/`, and `static/` together; do not introduce another `app/` nesting.
+- Run as numeric user and group **10001:10001**. This app doesn't need root.
+- Document container port **8000**. Does `EXPOSE` publish it on the laptop?
+- For `CMD`, use Gunicorn. Its program plus seven arguments must: bind
+  `0.0.0.0:8000`, use two workers, write access logs to `-` (stdout), and load
+  `app:app`. Find those flags in [the Dockerfile command breakdown](commands.md#the-dockerfile-decoded).
+- `RUN` happens during the build; `CMD` defines the default startup process.
+  JSON exec form makes each string one argument. It does not invoke a shell.
+
+**Checkpoint:** read each instruction aloud and identify its input and effect.
+Do not build yet: first decide which local files the build should be allowed to see.
+
+## 3. Create .dockerignore, then build and run (10 minutes)
+
+Create `.dockerignore` beside the Dockerfile. This exercise uses an allowlist:
+ignore everything, then include only the requirements file and application tree.
+Complete:
+
+```text
+*
+!_____
+!_____/
+!_____/**
+**/__pycache__
+**/*.pyc
+```
+
+`*` excludes paths; `!` makes an exception. Include the `app/` directory itself
+before its contents. The final exclusions keep generated Python cache files out.
+Git history, `.env` files, your virtual environment, and the slide deck do not
+belong in the build context. What could go wrong if a credential file is copied
+into an image?
+
+Now build:
 
 ```sh
-docker compose pull redis
-docker compose build web
+docker build -t classroom-web:workshop .
+docker images classroom-web
+```
+
+`build` creates an image. `-t` names/tags it: repository `classroom-web`, tag
+`workshop`. The final `.` is the current directory, the **build context**, not
+the container working directory. `images classroom-web` lists matching local images.
+
+**Checkpoint:** a successful build and an image listed with tag `workshop`.
+A build failure belongs here: fix one instruction and rebuild, observing cached layers.
+
+Start only the web container, attached to this terminal:
+
+```sh
+docker run --rm -p 127.0.0.1:8000:8000 classroom-web:workshop
+```
+
+`run` creates a container; `--rm` removes it after exit. `-p` publishes
+host IP : host port : container port. The image name/tag is the final argument.
+In another terminal:
+
+```sh
+curl -i http://localhost:8000/health
+```
+
+`curl` requests the URL; `-i` includes response headers. Use `curl.exe` in
+PowerShell if curl is aliased. A browser also shows the response.
+
+**Expected checkpoint: HTTP 503.** The web server runs, but we have not supplied
+Redis in this container's network. This proves a running process is not the same
+as a working application. `localhost` inside this container means itself.
+
+Press **Ctrl+C in the attached run terminal**, then wait for the container to
+exit and be removed. Free port 8000 before the next stage. If you see a Python
+import error or no HTTP response, fix that first; those are not the expected 503.
+
+## 4. Write the Compose file (15 minutes)
+
+Create `compose.yaml` at the repository root. Fill this scaffold. YAML indentation
+matters; use spaces. The service names are supplied, but you choose their configuration:
+
+```yaml
+services:
+  web:
+    build: _____
+    ports:
+      - "_____"
+    environment:
+      REDIS_HOST: _____
+
+  redis:
+    image: _____
+```
+
+Requirements:
+
+- Build web using the Dockerfile you wrote in the root.
+- Publish web on laptop loopback, host port 8000 → container port 8000.
+- Pull **Redis 7.4 on Alpine Linux** using its official image tag.
+- Make web connect to the **Redis service name**, not `localhost` or a fixed IP.
+- Do not publish Redis's port to the host. Both services join Compose's default network.
+
+Predict which service needs a build and which needs a pull. Then:
+
+```sh
+docker compose config
+docker compose up -d --build
+docker compose ps
+docker compose logs --tail 20 web
+```
+
+`config` validates/prints the resolved file; it does not start anything. `up`
+creates/starts the app; `-d` detaches; `--build` builds custom images first. `ps`
+shows state. `logs --tail 20 web` selects the last 20 log lines for web.
+
+At this stage there are no health checks or startup ordering. Redis may take a
+moment to become ready: refresh once it starts. You will improve that below.
+
+Open http://localhost:8000. Click **Add one** twice, then refresh.
+
+```sh
+docker compose exec redis redis-cli GET visits
+```
+
+`exec` runs a process in an existing container. `redis` selects the service;
+`redis-cli` is the program; `GET` is its command; `visits` is the key argument.
+
+**Checkpoint:** the browser and Redis report the same count. Refresh doesn't increment it.
+
+## 5. Add persistence yourself (10 minutes)
+
+Record your count, then run:
+
+```sh
+docker compose down
+docker compose up -d
+```
+
+`down` removes the containers/network; `up -d` recreates them in the background.
+**Before your volume exists, the old count should be gone.** Redis's default
+anonymous data volume is not automatically reattached to the replacement container.
+
+Now edit your Compose file to:
+
+1. Declare a named volume **`counter-data`** at the top-level `volumes:` key.
+2. Mount that volume at Redis's **`/data`** directory.
+3. Enable append-only persistence with Redis's startup command:
+   `redis-server --appendonly yes --appendfsync always`.
+
+Start the changed configuration with `docker compose up -d`, wait for Redis,
+then click Add one and record the new count. Repeat `down` and `up -d`.
+
+**Checkpoint:** the count now survives. Explain why both the mount and Redis's
+persistence settings matter. `--appendonly yes` enables the append-only log;
+`--appendfsync always` synchronizes every write for this small classroom experiment.
+You cannot recover the count lost before persistent storage was configured.
+
+## 6. Add readiness checks (10 minutes)
+
+Improve the same Compose file; do not create a third service:
+
+- Give Redis a health check running `redis-cli ping` using exec-form `CMD`.
+  Use interval `2s`, timeout `1s`, and retries `10`.
+- Add web's `depends_on` entry for Redis with `condition: service_healthy`.
+- Give web a health check that uses the image's Python interpreter to request
+  `http://localhost:8000/health` with urllib and a two-second request timeout.
+  Use interval `5s`, timeout `3s`, and retries `5`.
+
+Look at the health-check settings in [commands.md](commands.md#the-compose-file-decoded)
+for syntax and meaning, then construct the YAML. The complete answer is available
+in `solutions/compose.yaml` after your attempt.
+
+```sh
+docker compose config
 docker compose up -d
 docker compose ps
-docker compose images
 ```
 
-`pull redis` downloads the image for the Redis service. `build web` builds our
-custom image. `up -d` creates/starts the app in the background (`-d` = detach).
-`ps` shows container/health status; wait for both services to be healthy.
-`images` lists the images used by those containers.
+**Checkpoint:** both services show healthy, and web starts after Redis is healthy.
+Can `depends_on` prevent a dependency from failing later?
 
-For everyday work, combine building and starting: `docker compose up -d --build`.
-`--build` builds configured images first; it is not an image tag.
+## 7. Change, diagnose and explain (10 minutes)
 
-Open http://localhost:8000, click Add one twice, and refresh. Explain why refresh
-does not increase the count. Notice that building web also pulls a Python base image.
+- **Rebuild:** change the heading in `app/templates/index.html`. Run
+  `docker compose restart web`, then refresh. Why is it still old? Run
+  `docker compose up -d --build`, wait for healthy status, then refresh again.
+- **Observe:** follow requests with `docker compose logs -f --tail 20 web`.
+  `-f` follows new output; Ctrl+C leaves this log viewer without stopping detached services.
+- **Break:** run `docker compose stop redis`. Refresh: HTTP 503. Inspect
+  `docker compose ps -a` (`-a` includes stopped containers) and the logs.
+- **Recover:** run `docker compose start redis`, wait for readiness, and refresh.
+  The count returns. `stop`/`start` reuse an existing container; `restart` does
+  not rebuild an image or apply changes to Compose configuration.
 
-## 2. Follow a request (5 minutes)
+Finish with `docker compose down`, preserving your named volume. A deliberate
+reset is `docker compose down --volumes`: **this deletes the project's saved count**.
+Do not reset your partner's or an unrelated project's data.
 
-```sh
-docker compose logs --tail 20 web
-docker compose exec redis redis-cli GET visits
-docker compose exec web sh
-```
+## Your hand-in
 
-`logs` reads output, `--tail 20` selects the last 20 lines per container, and
-`web` selects the service. Try `docker compose logs -f --tail 20 web` in a second
-terminal: `-f` follows new logs; Ctrl+C leaves the log viewer while services keep running.
-
-`exec` runs a program inside an existing container. In the Redis example, the
-service is `redis`, the program is `redis-cli`, its command is `GET`, and its
-key argument is `visits`. In the last example, the program is the shell `sh`.
-Inside that shell run `pwd` (show the working directory), then
-`printenv REDIS_HOST` (show that environment variable), then `exit` (leave the shell).
-
-Explain each hop: browser → published host port → web → `redis:6379`.
-Why would `REDIS_HOST=localhost` fail inside the web container?
-Why can the browser use port 8000 but not the Redis port on the host?
-
-## 3. Recreate without losing data (5 minutes)
-
-Record the count, then predict what each command does:
-
-```sh
-docker compose restart web
-docker compose down
-docker compose up -d
-docker compose exec redis redis-cli GET visits
-```
-
-`restart web` stops and starts the existing web container; it does not rebuild.
-`down` removes the service containers and network, keeping our named volume.
-`up -d` recreates them and reuses the saved volume.
-
-The count should remain. Find `counter-data` in the Compose file.
-What would happen without that mount when the Redis container is removed?
-
-## 4. Change the image (5 minutes)
-
-Change the heading in `app/templates/index.html`. Refresh first: why is it unchanged?
-
-```sh
-docker compose up -d --build
-```
-
-Refresh again. Which build layers were reused? Why copy requirements before the app?
-Explain why an image and a running container are different things.
-`--build` reads the changed source into a new image before `up` recreates web.
-Running only `restart web` would keep using the old image.
-
-## 5. Break a dependency (5 minutes)
-
-```sh
-docker compose stop redis
-```
-
-Refresh the page. It should return HTTP 503 with a useful message, not an
-invented count. Inspect `docker compose logs --tail 20 web` and `docker compose ps --all`.
-`stop redis` halts Redis without removing its container. `ps --all` (also `ps -a`)
-includes stopped containers, so you can see what happened.
-
-```sh
-docker compose start redis
-```
-
-`start redis` starts the already-existing stopped Redis container. Use `up`
-instead when containers need to be created.
-
-Wait a few seconds and refresh. Does the original count return? Explain why
-startup ordering alone cannot prevent a dependency failing later.
-
-## 6. Explain and clean up (5 minutes)
-
-Explain to your partner: Dockerfile, image, container, registry, network, volume.
-Then stop your project while preserving its data:
-
-```sh
-docker compose down
-```
-
-Optional destructive experiment, **only for this workshop's disposable count**:
-
-```sh
-docker compose down --volumes
-docker compose up -d
-```
-
-The counter starts at zero. Why? Finish with `docker compose down`.
-`--volumes` means delete this project's declared named volumes too. It is the
-destructive difference from plain `down`.
+Show your partner your three root files and demonstrate a working counter.
+Explain the base image/tag, build context, build cache, port mapping, Redis
+hostname, named volume, and health dependency without opening the answer key.
+Compare with `solutions/` only after you have tried each checkpoint.

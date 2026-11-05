@@ -1,109 +1,107 @@
 # Facilitator guide
 
-Audience: university students comfortable with a terminal, files, and a browser.
-No Docker experience assumed. Plan for a 90-minute core session, with installation
-completed before class. Allow up to 120 minutes if you explain every installation
-and command example live. The five requested topics are sections, not a five-slide limit.
+This is a **containerization workshop**, starting with application source and
+ending with files students wrote. The root Dockerfile, dockerignore and Compose
+file are deliberately absent. `solutions/` holds the answer key; CI copies it
+into a disposable checkout to keep the reference tested.
 
-## Learning outcomes
+Keep the two-service scope: custom Python web image plus pulled Redis image.
+The lab follows the scaffold/hints/checkpoint style of the
+[former App Factory practical](https://github.com/APP-Factory-USIU/docker-workshop/blob/main/docs/DOCKER_PRACTICAL.md).
+Do not hand out the completed reference as the opening activity.
 
-Students can explain environment drift, distinguish a VM from a container,
-describe five core Docker concepts, check their installation, and run/rebuild a
-two-service app while explaining its network and persistent volume.
+## Preparation
 
-## Before the session
+- Send `docs/installation.md` before class. Git, Docker, Buildx and Compose should
+  pass their checks before the session; local Python/Redis are optional.
+- Allow 120–150 minutes for theory plus the 60–90-minute practical. The theory
+  and command slides are references: interleave them with students' typing.
+- On a fresh instructor clone, follow `solutions/README.md` to copy and run the
+  answer key. Verify Wi-Fi/registry access, browser, projection and image downloads.
+- Keep a clean starter clone ready to demonstrate creating files. A checkout in
+  which you already copied the answer key is not a student starting point.
+- Stop an older workshop stack before class if it occupies port 8000, preserving
+  its volume unless you deliberately want to erase it.
 
-Send `docs/installation.md` and the GitHub clone URL. Ask students to bring a
-laptop with Git and complete the sanity checks in the same terminal they will use.
-Confirm campus Wi-Fi can reach Docker Hub and PyPI. On the teaching laptop, run
-`docker compose pull redis` and `docker compose build web` before class. Test
-the browser and projector; keep a built laptop available for pairs with setup issues.
-The first build needs downloads; cached images make later exercises faster.
-Run `python3 tests/smoke.py` after starting the app, then intentionally reset only
-your workshop volume if you want to start at zero. Do not reset student data.
+## Teaching sequence
 
-## Suggested timing
+| Block | Activity | Evidence before moving on |
+| --- | --- | --- |
+| 30–40 min | Environment drift, VMs, containers and Docker | Students identify the shared-kernel distinction. |
+| 5–10 min | Inspect source; optionally show a native run | Identify runtime, dependencies, HTTP port and Redis hostname. |
+| 10 min | Write Dockerfile from the scaffold | Explain FROM, WORKDIR, COPY, RUN, USER, EXPOSE and CMD. |
+| 10 min | Write dockerignore, build and run one image | Tagged image exists; standalone web deliberately returns 503. |
+| 15 min | Write the two-service Compose file | Web and Redis connect; counter works. |
+| 10 min | Observe lost state, then add persistence | Before/after recreation demonstrates why the volume matters. |
+| 10 min | Add health checks and startup dependency | Both services healthy; readiness differs from a running process. |
+| 10 min | Rebuild and break/recover a dependency | Diagnose with ps/logs; explain restart versus rebuild. |
+| 5–10 min | Compare files, explain, clean up | Students explain their own three artifacts without the answer key. |
 
-| Time | Activity |
-| --- | --- |
-| 0–8 min | “Works on my machine”: ask for examples of missing dependencies or mismatched versions. |
-| 8–20 min | VMs: virtual hardware, hypervisor, separate guest kernel, examples, costs. |
-| 20–32 min | Containers: isolated processes, shared kernel, images, limitations. |
-| 32–40 min | VM comparison and using containers inside VMs. |
-| 40–50 min | Docker, five concepts, image lifecycle, Compose. |
-| 50–60 min | Installation routes and sanity checks; route difficult installs to paired work. |
-| 60–85 min | Student lab, emphasizing predictions and explanations. |
-| 85–90 min | Exit questions and cleanup. |
+If time is short, keep persistence and readiness as the next lab rather than
+skipping Dockerfile authoring. The main learning outcome is creating the files.
 
-The slide notes include prompts, command breakdowns, and source links.
-Use the command slides alongside the lab rather than presenting them all before
-students type. Package-manager setup and advanced test options are reference
-material in `docs/installation.md` and `docs/commands.md`.
+## Checkpoint answers and common mistakes
+
+1. **Runtime:** Flask, Redis client and Gunicorn come from requirements.txt. The
+   image supplies Python 3.13 slim. A local native run defaults to localhost for
+   Redis; Compose must explicitly set REDIS_HOST to the Redis service name.
+2. **Paths:** after WORKDIR /app, COPY app/ . puts app.py, templates and static
+   together. Copying into /app/app accidentally changes the module path. The
+   Gunicorn target app:app is module : object, not repository : image tag.
+3. **Caching:** copy requirements and install before copying source. A template
+   edit can then reuse the dependency layer. pip's --no-cache-dir controls pip's
+   cache; it does not disable Docker build-layer caching.
+4. **Context:** docker build's final dot selects files available to COPY. It is
+   independent of WORKDIR. The dockerignore allowlist excludes credentials and
+   unrelated repository files, then includes requirements and the app tree.
+5. **Single-container test:** Gunicorn should start and serve HTTP, but health
+   returns 503 because Redis is missing from that container's network. Treat a
+   startup crash or import error as a different failure, not a passing checkpoint.
+6. **Compose networking:** redis resolves by service name on the default network.
+   localhost inside web is web itself. Publish only web on host loopback.
+7. **Persistence:** before a named volume is attached, down/up should reset the
+   counter. Redis's default anonymous volume isn't automatically reattached. Once
+   counter-data is mounted at /data and AOF is enabled, count survives recreation.
+   Lost earlier state cannot be recovered. A volume is not a backup.
+8. **Readiness:** depends_on with service_healthy waits initially; it does not
+   prevent later outages. The app returns 503 if Redis stops and reconnects when
+   Redis returns. Its health route tests the actual dependency.
+9. **Rebuild:** source is copied into the image. restart reuses the same image;
+   up -d --build incorporates the edit and recreates web when its image changes.
+
+Use the reference only after students attempt a stage. Accept equivalent valid
+files that meet the requirements; formatting need not match the answer key.
 
 ## Command vocabulary
 
-Use `docker compose up -d --build` for the main walkthrough. Explain the program,
-plugin, action, flags, values, and service argument in that order. Pair each new
-command with a prediction. `--wait` remains in CI, where waiting for health matters
-to the next automated step; it is explained in the command guide.
+Every command/flag used is decoded in `docs/commands.md` or the native-baseline
+section of `docs/installation.md`. Teach standard Compose commands after students
+have written compose.yaml. Before then, demonstrate build -t and attached run -p.
 
-Teach `ps`, `logs -f --tail 20 web`, `exec`, `build`, `pull`, `stop`, `start`,
-`restart`, and `down` as the everyday toolkit. Explain `config` and `images` as
-inspection tools. Show the different outcomes of Ctrl+C during attached `up`
-versus Ctrl+C in `logs -f` for an already-detached app.
+Distinguish these contexts explicitly:
 
-Point out that `redis:7.4-alpine` is an image reference, `redis:6379` is a network
-address, and `app:app` is a Python module/object reference. The colon does not
-have one universal meaning. Likewise, `-v` means volume in Compose `run`, but
-verbose after Python's `unittest` arguments.
+- classroom-web:workshop is repository : image tag.
+- redis:6379 is host : network port.
+- app:app is Python module : application object.
+- -t labels an image in docker build; other commands may use -t differently.
+- -v means a volume in Compose run, but verbose in Python unittest.
+- Ctrl+C stops attached docker run/up, but merely exits logs -f for a detached app.
 
-## Demo script and answers
+## Assessment and exit questions
 
-1. Show the Dockerfile: `FROM` provides Python, `WORKDIR` sets a path, requirements
-   are copied first for build caching, `RUN` installs dependencies, `COPY` adds
-   source, `USER` avoids running the web process as root, `EXPOSE` documents a
-   port, and `CMD` starts Gunicorn. `EXPOSE` alone publishes no host port.
-2. Show Compose: `build` makes our image; `image` obtains Redis; the healthy
-   dependency controls initial startup; `ports` publishes only web on loopback;
-   environment config supplies the Redis hostname; the volume persists Redis files.
-3. Click Add one. GET `/` reads; POST `/count` uses atomic Redis INCR and a 303
-   redirect. Logs show both requests. A refresh doesn't cause a write.
-4. `redis` resolves through Compose's network. A container's `localhost` refers
-   to itself, not another container or the laptop. No fixed container IP is needed.
-5. `down` removes project containers and network, but retains the named volume.
-   Redis AOF lives there. `down --volumes` deletes that data deliberately.
-   A volume is persistence, not a backup, and each student's machine has its own count.
-6. A source edit requires a rebuild because there is no source bind mount.
-   A runtime writable layer does not modify the underlying image.
-7. Stopping Redis yields 503. The app creates fresh connections when it returns.
-   The initial `depends_on` check does not supervise later availability.
+Ask pairs to submit their root Dockerfile, .dockerignore and compose.yaml, then
+show a successful build, working counter, persistence, and outage recovery.
 
-## Concept checks
+1. Which files does the build context contain, and which files reach the image?
+2. What happens at build time versus container startup?
+3. Why did the standalone web container return 503?
+4. Why did you build web but pull Redis?
+5. Which configuration change made the count survive container removal?
+6. Which kernel does a Linux container use on a Mac?
 
-- “An Ubuntu container boots Ubuntu's kernel.” False: it normally supplies Ubuntu
-  user-space files and uses the Linux host/VM kernel.
-- “Containers replace VMs.” False: a VM can host many containers; Desktop runs
-  this lab's Linux containers in a Linux environment on non-Linux hosts.
-- “An image tag fixes the contents forever.” False: tags may move; digests identify contents.
-- “A running process is always healthy.” False: health checks test readiness/availability.
-- “Docker guarantees identical behavior everywhere.” False: architecture, kernel,
-  config, external services, and resources still matter.
+Answers: context follows dockerignore, COPY selects image files; RUN versus CMD;
+missing Redis dependency; custom application versus reusable official image;
+named volume plus Redis persistence; Linux kernel supplied by Desktop's VM/environment.
 
-## Exit questions
-
-1. Which kernel does this lab's container use on a Mac?
-2. What is the difference between `build`, `pull`, and `up`?
-3. Which file tells Docker how to build web? Which defines the whole app?
-4. Why does the count survive container recreation?
-5. What does the Server section in `docker version` prove?
-
-Answers: Linux kernel in Desktop's VM; build an image / download an image /
-create and start services; Dockerfile / compose.yaml; named volume with Redis
-persistence; the client can contact the selected daemon.
-
-## GitHub handoff
-
-The existing origin is `git@github.com:APP-Factory-USIU/AF-P1-Docker.git`.
-Review the local diff and slides, then commit and push with your usual workflow.
-No remote push is necessary to run the class locally. The included GitHub Actions
-workflow checks the app on pushes and pull requests once published.
+Finish with docker compose down, preserving the count. --volumes is an explicit,
+destructive reset of this project's declared volume and should be labelled before typing.

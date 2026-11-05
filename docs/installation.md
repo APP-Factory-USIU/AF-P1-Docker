@@ -116,7 +116,9 @@ report versions, and `hello-world` prints its greeting and exits successfully.
 A client version alone does not prove an engine is reachable. `hello-world`
 also tests pulling and running, but does not test builds, ports, or this app's network.
 
-In the cloned repo, complete the workshop check:
+The starter checkout intentionally has no root Dockerfile or Compose file.
+After these sanity checks, begin [the file-writing lab](lab.md), not `compose up`.
+Once you have written those files, the completed workshop check is:
 
 ```sh
 docker compose config --quiet
@@ -173,3 +175,52 @@ is a shell comment.
 The unprivileged `docker run --rm hello-world` check and every other Docker
 command above are broken down in [commands.md](commands.md). Prefix them with
 `sudo` on native Linux if that is the access route your administrator selected.
+
+## Optional: run the app without containerizing it
+
+This is a before/after comparison, not a prerequisite for the Docker practical.
+You need local Python 3.13 and Redis installed to do it. That host setup is exactly
+the dependency work the Dockerfile will later package. A facilitator can demonstrate
+it instead if students have only Docker installed.
+
+In one terminal, start an installed Redis server on loopback port 6379:
+
+```sh
+redis-server --bind 127.0.0.1 --port 6379
+```
+
+`redis-server` is the program; `--bind` takes its listening IP; `--port` takes
+the port number. If a local Redis server is already using that address/port,
+use that existing service rather than trying to start a second one.
+
+From the repository root, create a Python environment in a second terminal:
+
+```sh
+python3 -m venv .venv
+```
+
+`-m venv` runs Python's virtual-environment module; `.venv` is its destination.
+Activate it on Linux/macOS with `source .venv/bin/activate`; `source` loads that
+script into the current shell. On Windows PowerShell, create it with
+`py -3.13 -m venv .venv` (`-3.13` selects that installed Python version), then
+activate with `.venv\Scripts\Activate.ps1`. Follow local script-execution policy.
+
+Then run:
+
+```sh
+python -m pip install -r requirements.txt
+python -m flask --app app.app run --host 127.0.0.1 --port 8000
+```
+
+The first command runs pip's `install` action, reading `-r`'s filename argument.
+The second runs Flask's CLI module: `--app app.app` selects the Python module
+containing the app; `run` starts the development server; `--host` and `--port`
+select its listening address. Use this development server only for the local
+baseline; the Docker image uses Gunicorn.
+
+The app defaults to Redis on localhost; if you already set `REDIS_HOST` in your
+shell, ensure it points at this local server. Open http://localhost:8000 and click
+Add one. Missing Redis produces a real 503, rather than a fake working counter.
+Stop the Flask server with Ctrl+C before beginning the container lab so port
+8000 is free. Leave an existing Redis service alone; stop a Redis process you
+started for this demonstration when you no longer need it.
