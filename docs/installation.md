@@ -179,7 +179,8 @@ command above are broken down in [commands.md](commands.md). Prefix them with
 ## Optional: run the app without containerizing it
 
 This is a before/after comparison, not a prerequisite for the Docker practical.
-You need local Python 3.13 and Redis installed to do it. That host setup is exactly
+You need [uv](https://docs.astral.sh/uv/getting-started/installation/) and Redis installed to do it.
+uv can download Python 3.13 if it is not already available. That host setup is exactly
 the dependency work the Dockerfile will later package. A facilitator can demonstrate
 it instead if students have only Docker installed.
 
@@ -193,30 +194,27 @@ redis-server --bind 127.0.0.1 --port 6379
 the port number. If a local Redis server is already using that address/port,
 use that existing service rather than trying to start a second one.
 
-From the repository root, create a Python environment in a second terminal:
+From the repository root, create and synchronize a Python environment in a second terminal:
 
 ```sh
-python3 -m venv .venv
+uv sync --locked --python 3.13
+uv run --locked python -m flask --app app.app run --host 127.0.0.1 --port 8000
 ```
 
-`-m venv` runs Python's virtual-environment module; `.venv` is its destination.
-Activate it on Linux/macOS with `source .venv/bin/activate`; `source` loads that
-script into the current shell. On Windows PowerShell, create it with
-`py -3.13 -m venv .venv` (`-3.13` selects that installed Python version), then
-activate with `.venv\Scripts\Activate.ps1`. Follow local script-execution policy.
-
-Then run:
-
-```sh
-python -m pip install -r requirements.txt
-python -m flask --app app.app run --host 127.0.0.1 --port 8000
-```
-
-The first command runs pip's `install` action, reading `-r`'s filename argument.
-The second runs Flask's CLI module: `--app app.app` selects the Python module
+`uv sync` creates `.venv` and installs the dependencies from `uv.lock`.
+`--locked` rejects a lockfile that is out of date with `pyproject.toml`;
+`--python 3.13` selects the same Python version line as the container.
+`uv run` uses that environment without manual activation on Linux, macOS, or Windows.
+The second command runs Flask's CLI module: `--app app.app` selects the Python module
 containing the app; `run` starts the development server; `--host` and `--port`
 select its listening address. Use this development server only for the local
 baseline; the Docker image uses Gunicorn.
+
+Run the isolated unit tests without Redis using:
+
+```sh
+uv run --locked python -m unittest discover -s tests -v
+```
 
 The app defaults to Redis on localhost; if you already set `REDIS_HOST` in your
 shell, ensure it points at this local server. Open http://localhost:8000 and click

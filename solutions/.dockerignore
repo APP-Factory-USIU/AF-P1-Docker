@@ -1,5 +1,6 @@
 *
-!requirements.txt
+!pyproject.toml
+!uv.lock
 !app/
 !app/**
 **/__pycache__

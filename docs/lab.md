@@ -10,7 +10,7 @@ Allow 60–90 minutes for the practical after the theory discussion.
 
 ## 1. Explore the application (5 minutes)
 
-Open `app/app.py`, `requirements.txt`, and `app/templates/index.html`.
+Open `app/app.py`, `pyproject.toml`, `uv.lock`, and `app/templates/index.html`.
 
 Before writing Docker configuration, answer:
 
@@ -33,10 +33,12 @@ Create `Dockerfile` in the root, with no filename extension. Fill the blanks:
 
 ```dockerfile
 FROM _____
+COPY --from=_____ _____ _____ _____
 
 WORKDIR _____
-COPY _____ _____
+COPY _____ _____ _____
 RUN _____
+ENV PATH="/app/.venv/bin:$PATH"
 
 COPY _____ _____
 USER _____
@@ -47,9 +49,13 @@ CMD ["_____", "_____", "_____", "_____", "_____", "_____", "_____", "_____"]
 Constraints and hints:
 
 - Use the official Python **3.13 slim** image. Identify repository and tag.
-- Put the app in `/app`. Copy the requirements file there before the source.
-- Install requirements with pip. Use `-r` for the file and avoid pip's download
-  cache. Why should this `RUN` happen before copying application source?
+- Copy `/uv` and `/uvx` from `ghcr.io/astral-sh/uv:0.13.7` into `/bin/`.
+  This makes uv available without installing it with pip.
+- Put the app in `/app`. Copy `pyproject.toml` and `uv.lock` there before the source.
+- Install dependencies with `uv sync --locked --no-dev --no-cache`. `--locked`
+  rejects an out-of-date lockfile; the other flags omit development dependencies
+  and uv's download cache. Why should this `RUN` happen before copying source?
+- Add `/app/.venv/bin` to `PATH` so Gunicorn and Python use uv's environment.
 - Copy the **contents** of `app/` into the image working directory. That places
   `app.py`, `templates/`, and `static/` together; do not introduce another `app/` nesting.
 - Run as numeric user and group **10001:10001**. This app doesn't need root.
@@ -66,11 +72,12 @@ Do not build yet: first decide which local files the build should be allowed to 
 ## 3. Create .dockerignore, then build and run (10 minutes)
 
 Create `.dockerignore` beside the Dockerfile. This exercise uses an allowlist:
-ignore everything, then include only the requirements file and application tree.
+ignore everything, then include only the project metadata, lockfile, and application tree.
 Complete:
 
 ```text
 *
+!_____
 !_____
 !_____/
 !_____/**

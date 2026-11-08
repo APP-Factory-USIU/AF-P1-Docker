@@ -42,18 +42,20 @@ skipping Dockerfile authoring. The main learning outcome is creating the files.
 
 ## Checkpoint answers and common mistakes
 
-1. **Runtime:** Flask, Redis client and Gunicorn come from requirements.txt. The
+1. **Runtime:** Flask, Redis client and Gunicorn are declared in pyproject.toml
+   and pinned with their transitive dependencies in uv.lock. The
    image supplies Python 3.13 slim. A local native run defaults to localhost for
    Redis; Compose must explicitly set REDIS_HOST to the Redis service name.
 2. **Paths:** after WORKDIR /app, COPY app/ . puts app.py, templates and static
    together. Copying into /app/app accidentally changes the module path. The
    Gunicorn target app:app is module : object, not repository : image tag.
-3. **Caching:** copy requirements and install before copying source. A template
-   edit can then reuse the dependency layer. pip's --no-cache-dir controls pip's
-   cache; it does not disable Docker build-layer caching.
+3. **Caching:** copy pyproject.toml and uv.lock and run uv sync before copying
+   source. A template edit can then reuse the dependency layer. uv's --no-cache
+   controls its download cache; it does not disable Docker build-layer caching.
+   Add /app/.venv/bin to PATH so the non-root process uses uv's environment.
 4. **Context:** docker build's final dot selects files available to COPY. It is
    independent of WORKDIR. The dockerignore allowlist excludes credentials and
-   unrelated repository files, then includes requirements and the app tree.
+   unrelated repository files, then includes pyproject.toml, uv.lock and the app tree.
 5. **Single-container test:** Gunicorn should start and serve HTTP, but health
    returns 503 because Redis is missing from that container's network. Treat a
    startup crash or import error as a different failure, not a passing checkpoint.

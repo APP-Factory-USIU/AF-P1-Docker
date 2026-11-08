@@ -118,9 +118,11 @@ name      tag
 | Instruction | Meaning |
 | --- | --- |
 | `FROM python:3.13-slim` | Choose the base image. `python` is the repository; `3.13-slim` is the tag. |
+| `COPY --from=ghcr.io/astral-sh/uv:0.13.7 /uv /uvx /bin/` | Copy the uv executables from a versioned image into the Python image. No local uv installation is required for Docker builds. |
 | `WORKDIR /app` | Create/use `/app` as the working directory for following instructions and the default process. |
-| `COPY requirements.txt .` | Copy the requirements file from the build context into the working directory. The final dot is the destination. |
-| `RUN pip install --no-cache-dir -r requirements.txt` | During the build, run `pip install`; `--no-cache-dir` avoids retaining pip's download cache; `-r` reads package requirements from the following filename. `==` in the file pins a direct dependency version. |
+| `COPY pyproject.toml uv.lock ./` | Copy project metadata and the dependency lockfile into the working directory before copying source, allowing Docker to cache the dependency layer. |
+| `RUN uv sync --locked --no-dev --no-cache` | Install locked dependencies into `/app/.venv`; `--locked` rejects a stale lockfile, `--no-dev` omits development dependencies, and `--no-cache` avoids retaining uv's download cache. `package = false` in `pyproject.toml` means the app itself is not installed as a package. |
+| `ENV PATH="/app/.venv/bin:$PATH"` | Put the virtual environment's executables first so `gunicorn` and `python` use the installed dependencies without an activation script. |
 | `COPY app/ .` | Copy the application directory contents into `/app`. Editing this source requires a rebuild. |
 | `USER 10001:10001` | Run later instructions/default process as numeric user ID 10001 and group ID 10001. This is a user/group pair, not an image tag. |
 | `EXPOSE 8000` | Document the intended container port; it does not publish a host port. |

@@ -1,8 +1,10 @@
 FROM python:3.13-slim
+COPY --from=ghcr.io/astral-sh/uv:0.13.7 /uv /uvx /bin/
 
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked --no-dev --no-cache
+ENV PATH="/app/.venv/bin:$PATH"
 
 COPY app/ .
 USER 10001:10001

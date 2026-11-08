@@ -53,7 +53,8 @@ you make from the application's requirements. A successful build is only one che
 
 ```text
 app/                 Working Flask app, templates and static assets
-requirements.txt     Python dependencies
+pyproject.toml       Python project metadata and direct dependencies
+uv.lock              Locked Python dependencies (managed by uv)
 README.md            Workshop entry point
 docs/lab.md          Student exercises and checkpoints
 docs/commands.md     Commands, arguments, flags and image tags explained
@@ -63,7 +64,7 @@ slides/              Presentation and editable lesson content
 tests/               Unit tests and an HTTP-to-Redis smoke check
 ```
 
-Your completed files belong in the **repository root**, alongside `requirements.txt`.
+Your completed files belong in the **repository root**, alongside `pyproject.toml` and `uv.lock`.
 No branches, reset script or file-deletion command is required to begin.
 
 ## Learning resources
@@ -82,6 +83,8 @@ while retaining this workshop's two-service scope.
 
 This is a local teaching app, without accounts or authentication. Keep web bound
 to host loopback and Redis unpublished. Each laptop has its own counter.
-Image tags and transitive dependencies can change; freeze digests and a full lock
-file for an assessed lab requiring identical dependency contents. The reference
-uses Redis AOF storage on a named volume; persistence is not a backup.
+Python dependencies, including transitive dependencies, are pinned in `uv.lock`.
+Commit both `pyproject.toml` and `uv.lock` when changing dependencies with `uv add`
+or `uv lock`. Image tags can still change; freeze image digests for an assessed
+lab requiring identical image contents. The reference uses Redis AOF storage on
+a named volume; persistence is not a backup.
